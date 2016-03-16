@@ -60,7 +60,6 @@ get_new_rev_id(FilePid) ->
     NewrevId.
 
 get_base_revision() ->
-    %BaseDir = "/home/gaurav/project/erlang_learning/migrations/",
     {ok, Filenamelist} = file:list_dir(?BaseDir),
     Res = lists:filter(fun(Filename) ->
         %io:fwrite("file:~p~n", [Filename]),
@@ -72,7 +71,10 @@ get_base_revision() ->
     end,
     Filenamelist),
     io:fwrite("Base Rev id is ~p~n", [Res]),
-    hd(string:tokens(hd(Res), "_")).
+    case Res of
+        [] -> [];
+	[Head | _Tail] -> hd(string:tokens(Head, "_"))
+    end.
 
 
 get_next_revision(RevId) ->
