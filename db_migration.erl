@@ -1,12 +1,23 @@
 -module(db_migration).
 -export([start_mnesia/0, transform/2, fetch_all_changed_tables/0, get_base_revision/0,
-	 create_migration_file/1, init_migrations/0, get_old_rev_id/1,
-	 get_next_revision/1, get_current_head/1, get_new_rev_id/1
+	 create_migration_file/1, init_migrations/0, get_old_rev_id_using_file_pid/1,
+	 get_next_revision/1, get_current_head/1, get_new_rev_id_using_file_pid/1,
+	 read_config/0
 	]).
 
 -define(URNAME, user).
 -define(TABLE, schema_migrations).
 -define(BaseDir, "/home/gaurav/project/erlang_learning/migrations/").
+-define(ProjDir, "/home/gaurav/project/mnesia_migrate/").
+
+read_config() ->
+    case file:consult(?ProjDir ++ "priv/config") of
+        {ok, Conf} ->
+		    lists:foreach(fun({conf, Key, Val}) -> io:format("Key: ~p, Val: ~p ~n", [Key, Val]) end, Conf) ;
+        {error, Reason} ->
+		io:format("Error opening file.. Reason -> ~p~n", [Reason])
+    end.
+
 
 start_mnesia() ->
 	mnesia:start().
@@ -14,7 +25,7 @@ start_mnesia() ->
 % New_struct = Function to output data compatible modified schema.
 %transform(Old_struct, New_struct) ->
 %        RecV2 = [uid, uname, upass, umail],
-%	{atomic, ok} = mnesia:transform_table(?URNAME, 
+%	{atomic, ok} = mnesia:transform_table(?URNAME,
 %					      fun(Old_struct) ->
 %							      New_struct
 %					      end, RecV2, ?URNAME).
@@ -41,21 +52,21 @@ fetch_all_changed_tables() ->
     io:fwrite("Tables needing migration : ~p~n", [Tabletomigrate]),
     Tabletomigrate.
 
-get_old_rev_id(FilePid) ->
+get_old_rev_id_using_file_pid(FilePid) ->
     ListTokens = string:tokens(io:get_line(FilePid, "\n"), " = "),
     if hd(ListTokens) == "OldRevisionId" ->
 	OldrevId = tl(ListTokens);
     hd(ListTokens) /= "OldRevisionId" ->
-        OldrevId = get_old_rev_id(FilePid)
+        OldrevId = get_old_rev_id_using_file_pid(FilePid)
     end,
     OldrevId.
 
-get_new_rev_id(FilePid) ->
+get_new_rev_id_using_file_pid(FilePid) ->
     ListTokens = string:tokens(io:get_line(FilePid, "\n"), " = "),
     if hd(ListTokens) == "NewRevisionId" ->
 	NewrevId = tl(ListTokens);
     hd(ListTokens) /= "NewRevisionId" ->
-        NewrevId = get_new_rev_id(FilePid)
+        NewrevId = get_new_rev_id_using_file_pid(FilePid)
     end,
     NewrevId.
 
@@ -64,7 +75,7 @@ get_base_revision() ->
     Res = lists:filter(fun(Filename) ->
         %io:fwrite("file:~p~n", [Filename]),
         {ok, FilePid} = file:open(?BaseDir++Filename, [read]),
-        OldrevId = get_old_rev_id(FilePid),
+        OldrevId = get_old_rev_id_using_file_pid(FilePid),
         %file:close(FilePid),
         %io:fwrite("Rev id is ~p~n", [string:to_upper(OldrevId)]),
         string:equal(list_to_binary(OldrevId),<<"None\n">>)
@@ -82,7 +93,7 @@ get_next_revision(RevId) ->
     {ok, Filenamelist} = file:list_dir(?BaseDir),
     Res = lists:filter(fun(Filename) ->
         {ok, FilePid} = file:open(?BaseDir++Filename, [read]),
-        OldrevId = get_old_rev_id(FilePid),
+        OldrevId = get_old_rev_id_using_file_pid(FilePid),
         %file:close(FilePid),
         %io:fwrite("Curr Rev: ~p~n", [OldrevId]),
         string:equal(list_to_binary(OldrevId),list_to_binary(RevId++"\n"))
