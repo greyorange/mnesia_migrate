@@ -3,13 +3,16 @@
 %% This is an autogenerate file. Please adjust
 
 -module({{modulename}}).
--export([up/0, down/0]).
+-export([up/0, down/0, get_current_rev/0, get_prev_rev/0]).
 
-NewRevisionId = {{ new_rev_id }}
-OldRevisionId = {{ old_rev_id }}
+get_current_rev() ->
+    {{ new_rev_id }}.
+
+get_prev_rev() ->
+    {{ old_rev_id }}.
 
 up() ->
-    Tabletomigrate = {{tabtomig}}
+    %%Tabletomigrate = {{tabtomig}}
     ok.
 
 down() ->
