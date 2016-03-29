@@ -1,14 +1,15 @@
 -module(db_migration).
--export([start_mnesia/0, transform/2, fetch_all_changed_tables/0, get_base_revision/0,
+-export([start_mnesia/0, transform/2, get_base_revision/0,
 	 create_migration_file/1, init_migrations/0, get_old_rev_id_using_file_pid/1,
 	 get_next_revision/1, get_current_head/1, get_new_rev_id_using_file_pid/1,
-	 read_config/0
+	 read_config/0, create_migration_file/0
 	]).
 
 -define(URNAME, user).
 -define(TABLE, schema_migrations).
 -define(BaseDir, "/home/gaurav/project/erlang_learning/migrations/").
 -define(ProjDir, "/home/gaurav/project/mnesia_migrate/").
+-define(ModelDir, "/home/gaurav/project/butler_server/src").
 
 read_config() ->
     case file:consult(?ProjDir ++ "priv/config") of
@@ -21,14 +22,6 @@ read_config() ->
 
 start_mnesia() ->
 	mnesia:start().
-
-% New_struct = Function to output data compatible modified schema.
-%transform(Old_struct, New_struct) ->
-%        RecV2 = [uid, uname, upass, umail],
-%	{atomic, ok} = mnesia:transform_table(?URNAME,
-%					      fun(Old_struct) ->
-%							      New_struct
-%					      end, RecV2, ?URNAME).
 
 init_migrations() ->
     case lists:member(?TABLE, mnesia:system_info(tables)) of
@@ -46,29 +39,28 @@ init_migrations() ->
 transform(_Old_struct, _New_struct) ->
 	ok.
 
-fetch_all_changed_tables() ->
-    Models = models:all(),
-    Tabletomigrate = [TableName || {TableName, Options} <- Models , proplists:get_value(attributes, Options) /= mnesia:table_info(TableName, attributes)],
-    io:fwrite("Tables needing migration : ~p~n", [Tabletomigrate]),
-    Tabletomigrate.
+%fetch_all_changed_tables() ->
+    %set_path("/home/gaurav/project/butler_server/src"),
+%    Models = models:all(),
+%    Tabletomigrate = [TableName || {TableName, Options} <- Models , proplists:get_value(attributes, Options) /= mnesia:table_info(TableName, attributes)],
+%    io:fwrite("Tables needing migration : ~p~n", [Tabletomigrate]),
+%    Tabletomigrate.
 
 get_old_rev_id_using_file_pid(FilePid) ->
     ListTokens = string:tokens(io:get_line(FilePid, "\n"), " = "),
     if hd(ListTokens) == "OldRevisionId" ->
-	OldrevId = tl(ListTokens);
+	tl(ListTokens);
     hd(ListTokens) /= "OldRevisionId" ->
-        OldrevId = get_old_rev_id_using_file_pid(FilePid)
-    end,
-    OldrevId.
+        get_old_rev_id_using_file_pid(FilePid)
+    end.
 
 get_new_rev_id_using_file_pid(FilePid) ->
     ListTokens = string:tokens(io:get_line(FilePid, "\n"), " = "),
     if hd(ListTokens) == "NewRevisionId" ->
-	NewrevId = tl(ListTokens);
+	tl(ListTokens);
     hd(ListTokens) /= "NewRevisionId" ->
-        NewrevId = get_new_rev_id_using_file_pid(FilePid)
-    end,
-    NewrevId.
+        get_new_rev_id_using_file_pid(FilePid)
+    end.
 
 get_base_revision() ->
     {ok, Filenamelist} = file:list_dir(?BaseDir),
@@ -115,6 +107,17 @@ create_migration_file(CommitMessage) ->
     OldRevisionId = get_current_head(BaseRev),
     Filename = NewRevisionId ++ "_" ++ string:substr(CommitMessage, 1, 20) ,
     {ok, Data} = migration_template:render([{new_rev_id , NewRevisionId}, {old_rev_id, OldRevisionId},
-					  {modulename, Filename}, {tabtomig, fetch_all_changed_tables()},
+					  {modulename, Filename}, {tabtomig, []},
 					  {commitmessage, CommitMessage}]),
+    file:write_file(?BaseDir ++ Filename ++ ".erl", Data).
+
+create_migration_file() ->
+    erlydtl:compile('schema.template', migration_template),
+    NewRevisionId = string:substr(uuid:to_string(uuid:uuid4()),1,8),
+    BaseRev = get_base_revision(),
+    OldRevisionId = get_current_head(BaseRev),
+    Filename = NewRevisionId ++ "_migration" ,
+    {ok, Data} = migration_template:render([{new_rev_id , NewRevisionId}, {old_rev_id, OldRevisionId},
+					  {modulename, Filename}, {tabtomig, []},
+					  {commitmessage, "migration"}]),
     file:write_file(?BaseDir ++ Filename ++ ".erl", Data).
