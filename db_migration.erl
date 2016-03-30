@@ -1,8 +1,10 @@
 -module(db_migration).
 -export([start_mnesia/0, transform/2, get_base_revision/0,
 	 create_migration_file/1, init_migrations/0,
-	 get_next_revision/1, get_current_head/1,
-	 read_config/0, create_migration_file/0
+	 get_next_revision/1, get_current_head/1, get_current_head/0,
+	 read_config/0, create_migration_file/0,
+	 find_pending_migrations/0, apply_upgrades/0,
+	 get_revision_tree/0, append_revision_tree/2
 	]).
 
 -define(URNAME, user).
@@ -80,11 +82,14 @@ get_current_head(RevId) ->
         NextRevId -> get_current_head(NextRevId)
     end.
 
+get_current_head() ->
+    BaseRev = get_base_revision(),
+    get_current_head(BaseRev).
+
 create_migration_file(CommitMessage) ->
     erlydtl:compile('schema.template', migration_template),
     NewRevisionId = string:substr(uuid:to_string(uuid:uuid4()),1,8),
-    BaseRev = get_base_revision(),
-    OldRevisionId = get_current_head(BaseRev),
+    OldRevisionId = get_current_head(),
     Filename = NewRevisionId ++ "_" ++ string:substr(CommitMessage, 1, 20) ,
     {ok, Data} = migration_template:render([{new_rev_id , NewRevisionId}, {old_rev_id, OldRevisionId},
 					  {modulename, Filename}, {tabtomig, []},
@@ -102,3 +107,32 @@ create_migration_file() ->
 					  {commitmessage, "migration"}]),
     file:write_file(?BaseDir ++ Filename ++ ".erl", Data),
     io:format("New file created ~p~n", [Filename ++ ".erl"]).
+
+get_revision_tree() ->
+    BaseRev = get_base_revision(),
+    List1 = [],
+    RevList = append_revision_tree(List1, BaseRev),
+    io:format("RevList ~p~n", [RevList]),
+    RevList.
+
+find_pending_migrations() ->
+   % fetch current revision head from database
+   AppliedHead = aabb83451,
+   List1 = [],
+   RevList = append_revision_tree(List1, AppliedHead),
+   io:format("Revisions needing migration : ~p~n", [RevList]),
+   RevList.
+
+apply_upgrades() ->
+    RevList = find_pending_migrations(),
+    lists:foreach(fun(RevId) -> RevId:up() end, RevList),
+    io:format("all upgrades successfully applied.~n").
+
+
+append_revision_tree(List1, RevId) ->
+    case get_next_revision(RevId) of
+        [] -> List1 ++ [RevId];
+	NewRevId ->
+		   List2 = List1 ++ [RevId],
+	           append_revision_tree(List2, NewRevId)
+    end.
