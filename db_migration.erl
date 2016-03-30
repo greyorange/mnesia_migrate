@@ -55,7 +55,7 @@ get_base_revision() ->
     BaseModuleName = list_to_atom(filename:basename(Res, ".beam")),
     io:fwrite("Base Rev file is ~p~n", [BaseModuleName]),
     case Res of
-        [] -> [];
+        [] -> none;
 	_ -> BaseModuleName:get_current_rev()
     end.
 
@@ -93,11 +93,12 @@ create_migration_file(CommitMessage) ->
 
 create_migration_file() ->
     erlydtl:compile('schema.template', migration_template),
-    NewRevisionId = string:substr(uuid:to_string(uuid:uuid4()),1,8),
+    NewRevisionId = "a" ++ string:substr(uuid:to_string(uuid:uuid4()),1,8),
     BaseRev = get_base_revision(),
     OldRevisionId = get_current_head(BaseRev),
     Filename = NewRevisionId ++ "_migration" ,
     {ok, Data} = migration_template:render([{new_rev_id , NewRevisionId}, {old_rev_id, OldRevisionId},
 					  {modulename, Filename}, {tabtomig, []},
 					  {commitmessage, "migration"}]),
-    file:write_file(?BaseDir ++ Filename ++ ".erl", Data).
+    file:write_file(?BaseDir ++ Filename ++ ".erl", Data),
+    io:format("New file created ~p~n", [Filename ++ ".erl"]).
