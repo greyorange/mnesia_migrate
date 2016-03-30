@@ -125,7 +125,7 @@ find_pending_migrations() ->
 
 apply_upgrades() ->
     RevList = find_pending_migrations(),
-    lists:foreach(fun(RevId) -> RevId:up() end, RevList),
+    lists:foreach(fun(RevId) -> ModuleName = list_to_atom(atom_to_list(RevId) ++ "_migration") , ModuleName:up() end, RevList),
     io:format("all upgrades successfully applied.~n").
 
 
