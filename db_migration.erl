@@ -1,15 +1,14 @@
 -module(db_migration).
 -export([start_mnesia/0, transform/2, get_base_revision/0,
-	 create_migration_file/1, init_migrations/0, get_old_rev_id_using_file_pid/1,
-	 get_next_revision/1, get_current_head/1, get_new_rev_id_using_file_pid/1,
+	 create_migration_file/1, init_migrations/0,
+	 get_next_revision/1, get_current_head/1,
 	 read_config/0, create_migration_file/0
 	]).
 
 -define(URNAME, user).
 -define(TABLE, schema_migrations).
--define(BaseDir, "/home/gaurav/project/erlang_learning/migrations/").
+-define(BaseDir, "/home/gaurav/project/mnesia_migrate/migrations/").
 -define(ProjDir, "/home/gaurav/project/mnesia_migrate/").
--define(ModelDir, "/home/gaurav/project/butler_server/src").
 
 read_config() ->
     case file:consult(?ProjDir ++ "priv/config") of
@@ -46,58 +45,39 @@ transform(_Old_struct, _New_struct) ->
 %    io:fwrite("Tables needing migration : ~p~n", [Tabletomigrate]),
 %    Tabletomigrate.
 
-get_old_rev_id_using_file_pid(FilePid) ->
-    ListTokens = string:tokens(io:get_line(FilePid, "\n"), " = "),
-    if hd(ListTokens) == "OldRevisionId" ->
-	tl(ListTokens);
-    hd(ListTokens) /= "OldRevisionId" ->
-        get_old_rev_id_using_file_pid(FilePid)
-    end.
-
-get_new_rev_id_using_file_pid(FilePid) ->
-    ListTokens = string:tokens(io:get_line(FilePid, "\n"), " = "),
-    if hd(ListTokens) == "NewRevisionId" ->
-	tl(ListTokens);
-    hd(ListTokens) /= "NewRevisionId" ->
-        get_new_rev_id_using_file_pid(FilePid)
-    end.
-
 get_base_revision() ->
-    {ok, Filenamelist} = file:list_dir(?BaseDir),
+    Modulelist = filelib:wildcard("migrations/*.beam"),
     Res = lists:filter(fun(Filename) ->
-        %io:fwrite("file:~p~n", [Filename]),
-        {ok, FilePid} = file:open(?BaseDir++Filename, [read]),
-        OldrevId = get_old_rev_id_using_file_pid(FilePid),
-        %file:close(FilePid),
-        %io:fwrite("Rev id is ~p~n", [string:to_upper(OldrevId)]),
-        string:equal(list_to_binary(OldrevId),<<"None\n">>)
+        Modulename = list_to_atom(filename:basename(Filename, ".beam")),
+        string:equal(Modulename:get_prev_rev(),none)
     end,
-    Filenamelist),
-    io:fwrite("Base Rev id is ~p~n", [Res]),
+    Modulelist),
+    BaseModuleName = list_to_atom(filename:basename(Res, ".beam")),
+    io:fwrite("Base Rev file is ~p~n", [BaseModuleName]),
     case Res of
         [] -> [];
-	[Head | _Tail] -> hd(string:tokens(Head, "_"))
+	_ -> BaseModuleName:get_current_rev()
     end.
 
 
 get_next_revision(RevId) ->
-    %BaseDir = "/home/gaurav/project/erlang_learning/migrations/",
-    {ok, Filenamelist} = file:list_dir(?BaseDir),
+    Modulelist = filelib:wildcard("migrations/*.beam"),
     Res = lists:filter(fun(Filename) ->
-        {ok, FilePid} = file:open(?BaseDir++Filename, [read]),
-        OldrevId = get_old_rev_id_using_file_pid(FilePid),
-        %file:close(FilePid),
-        %io:fwrite("Curr Rev: ~p~n", [OldrevId]),
-        string:equal(list_to_binary(OldrevId),list_to_binary(RevId++"\n"))
+        Modulename = list_to_atom(filename:basename(Filename, ".beam")),
+        OldrevId = Modulename:get_prev_rev(),
+        string:equal(OldrevId, RevId)
     end,
-    Filenamelist),
+    Modulelist),
     %io:fwrite("Base Rev: ~p Next Rev ~p~n", [RevId,Res]),
-    Res.
+    case Res of
+    [] -> [];
+    _ -> ModuleName = list_to_atom(filename:basename(Res, ".beam")), ModuleName:get_current_rev()
+    end.
 
 get_current_head(RevId) ->
     case get_next_revision(RevId) of
 	[] -> RevId ;
-        _ -> get_current_head(hd(string:tokens(hd(get_next_revision(RevId)),"_")))
+        NextRevId -> get_current_head(NextRevId)
     end.
 
 create_migration_file(CommitMessage) ->
