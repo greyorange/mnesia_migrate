@@ -4,13 +4,16 @@
 	 get_next_revision/1, get_current_head/1, get_current_head/0,
 	 read_config/0, create_migration_file/0,
 	 find_pending_migrations/0, apply_upgrades/0,
-	 get_revision_tree/0, append_revision_tree/2
+	 get_revision_tree/0, append_revision_tree/2,
+	 get_applied_head/0, update_head/1
 	]).
 
 -define(URNAME, user).
 -define(TABLE, schema_migrations).
 -define(BaseDir, "/home/gaurav/project/mnesia_migrate/migrations/").
 -define(ProjDir, "/home/gaurav/project/mnesia_migrate/").
+
+-record(schema_migrations, {curr_head=null, extra_info=null}).
 
 read_config() ->
     case file:consult(?ProjDir ++ "priv/config") of
@@ -30,10 +33,11 @@ init_migrations() ->
             ok;
         false ->
             io:format("Table schema_migration not found, creating...~n", []),
-            Attr = [{type, ordered_set}, {disc_copies, migresia:list_nodes()}],
+            Attr = [{ram_copies, []}, {disk_copies, []} ,{attributes, record_info(fields, schema_migrations)}],
             case mnesia:create_table(?TABLE, Attr) of
                 {atomic, ok}      -> io:format(" => created~n", []);
-                {aborted, Reason} -> throw({error, Reason})
+                {aborted, Reason} -> io:format("mnesia create table error: ~p~n", [Reason]),
+				     throw({error, Reason})
             end
     end.
 
@@ -117,7 +121,10 @@ get_revision_tree() ->
 
 find_pending_migrations() ->
    % fetch current revision head from database
-   AppliedHead = aabb83451,
+   AppliedHead = case get_applied_head() of
+   none -> get_base_revision() ;
+   Id -> Id
+   end,
    List1 = [],
    RevList = append_revision_tree(List1, AppliedHead),
    io:format("Revisions needing migration : ~p~n", [RevList]),
@@ -126,7 +133,9 @@ find_pending_migrations() ->
 apply_upgrades() ->
     RevList = find_pending_migrations(),
     lists:foreach(fun(RevId) -> ModuleName = list_to_atom(atom_to_list(RevId) ++ "_migration") , ModuleName:up() end, RevList),
-    io:format("all upgrades successfully applied.~n").
+    io:format("all upgrades successfully applied.~n"),
+    %% update head in database
+    update_head(lists:last(RevList)).
 
 
 append_revision_tree(List1, RevId) ->
@@ -136,3 +145,11 @@ append_revision_tree(List1, RevId) ->
 		   List2 = List1 ++ [RevId],
 	           append_revision_tree(List2, NewRevId)
     end.
+
+get_applied_head() ->
+	{atomic, KeyList} = mnesia:transaction(fun() -> mnesia:all_keys(schema_migrations) end),
+	io:format("current applied head is : ~p~n", [hd(KeyList)]),
+	hd(KeyList).
+
+update_head(Head) ->
+	mnesia:transaction(fun() -> mnesia:write(schema_migrations, #schema_migrations{curr_head = Head}, write) end).
