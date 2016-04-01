@@ -16,7 +16,10 @@
 -record(schema_migrations, {curr_head=null, extra_info=null}).
 
 read_config() ->
-    {ok, Val} = application:get_env(mnesia_migrate, migration_dir),
+    Val = case application:get_env(mnesia_migrate, migration_dir, "~/project/mnesia_migrate/migrations/") of
+        {ok, Value} -> Value;
+        Def -> Def
+	end,
     io:format("migration_dir: ~p~n", [Val]).
 
 start_mnesia() ->
