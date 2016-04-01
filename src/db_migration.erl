@@ -16,13 +16,8 @@
 -record(schema_migrations, {curr_head=null, extra_info=null}).
 
 read_config() ->
-    case file:consult(?ProjDir ++ "priv/config") of
-        {ok, Conf} ->
-		    lists:foreach(fun({conf, Key, Val}) -> io:format("Key: ~p, Val: ~p ~n", [Key, Val]) end, Conf) ;
-        {error, Reason} ->
-		io:format("Error opening file.. Reason -> ~p~n", [Reason])
-    end.
-
+    {ok, Val} = application:get_env(mnesia_migrate, migration_dir),
+    io:format("migration_dir: ~p~n", [Val]).
 
 start_mnesia() ->
 	mnesia:start().
