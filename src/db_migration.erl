@@ -5,7 +5,7 @@
 	 read_config/0, create_migration_file/0,
 	 find_pending_migrations/0, apply_upgrades/0,
 	 get_revision_tree/0, append_revision_tree/2,
-	 get_applied_head/0, update_head/1
+	 get_applied_head/0, update_head/1, has_migration_behaviour/1
 	]).
 
 -define(URNAME, user).
@@ -49,11 +49,29 @@ transform(_Old_struct, _New_struct) ->
 %    io:fwrite("Tables needing migration : ~p~n", [Tabletomigrate]),
 %    Tabletomigrate.
 
+
+has_migration_behaviour(Modulename) ->
+    case catch Modulename:module_info(attributes) of
+        {'EXIT', {undef, _}} ->
+            false;
+        Attributes ->
+            case lists:keyfind(behaviour, 1, Attributes) of
+                {behaviour, BehaviourList} ->
+                    lists:member(migration, BehaviourList);
+                false ->
+                    false
+            end
+    end.
+
+
 get_base_revision() ->
-    Modulelist = filelib:wildcard("migrations/*.beam"),
+    Modulelist = filelib:wildcard("ebin/*.beam"),
     Res = lists:filter(fun(Filename) ->
         Modulename = list_to_atom(filename:basename(Filename, ".beam")),
-        string:equal(Modulename:get_prev_rev(),none)
+        case has_migration_behaviour(Modulename) of
+	    true -> string:equal(Modulename:get_prev_rev(),none);
+	    false -> false
+	end
     end,
     Modulelist),
     BaseModuleName = list_to_atom(filename:basename(Res, ".beam")),
@@ -96,7 +114,12 @@ create_migration_file(CommitMessage) ->
     {ok, Data} = migration_template:render([{new_rev_id , NewRevisionId}, {old_rev_id, OldRevisionId},
 					  {modulename, Filename}, {tabtomig, []},
 					  {commitmessage, CommitMessage}]),
-    file:write_file(?BaseDir ++ Filename ++ ".erl", Data).
+    FilePath = case application:get_env(mnesia_migrate, migration_dir, "/home/gaurav/project/mnesia_migrate/src/migrations/") of
+        {ok, Value} -> Value;
+        Def -> Def
+	end,
+    file:write_file(FilePath ++ Filename ++ ".erl", Data),
+    io:format("New file created ~p~n", [Filename ++ ".erl"]).
 
 create_migration_file() ->
     erlydtl:compile('schema.template', migration_template),
@@ -107,7 +130,11 @@ create_migration_file() ->
     {ok, Data} = migration_template:render([{new_rev_id , NewRevisionId}, {old_rev_id, OldRevisionId},
 					  {modulename, Filename}, {tabtomig, []},
 					  {commitmessage, "migration"}]),
-    file:write_file(?BaseDir ++ Filename ++ ".erl", Data),
+    FilePath = case application:get_env(mnesia_migrate, migration_dir, "/home/gaurav/project/mnesia_migrate/src/migrations/") of
+        {ok, Value} -> Value;
+        Def -> Def
+	end,
+    file:write_file(FilePath ++ Filename ++ ".erl", Data),
     io:format("New file created ~p~n", [Filename ++ ".erl"]).
 
 get_revision_tree() ->

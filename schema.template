@@ -3,7 +3,10 @@
 %% This is an autogenerate file. Please adjust
 
 -module({{modulename}}).
--export([up/0, down/0, get_current_rev/0, get_prev_rev/0]).
+-behaviour(migration).
+-export([up/0, down/0, get_current_rev/0, get_prev_rev/0, init/1]).
+
+init([]) -> ok.
 
 get_current_rev() ->
     {{ new_rev_id }}.
@@ -12,7 +15,6 @@ get_prev_rev() ->
     {{ old_rev_id }}.
 
 up() ->
-    %%Tabletomigrate = {{tabtomig}}
     ok.
 
 down() ->
