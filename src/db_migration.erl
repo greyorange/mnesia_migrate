@@ -35,7 +35,7 @@ init_migrations() ->
             ok;
         false ->
             io:format("Table schema_migration not found, creating...~n", []),
-            Attr = [{ram_copies, []}, {disk_copies, []} ,{attributes, record_info(fields, schema_migrations)}],
+            Attr = [{disc_copies, [node()]}, {attributes, record_info(fields, schema_migrations)}],
             case mnesia:create_table(?TABLE, Attr) of
                 {atomic, ok}      -> io:format(" => created~n", []);
                 {aborted, Reason} -> io:format("mnesia create table error: ~p~n", [Reason]),
