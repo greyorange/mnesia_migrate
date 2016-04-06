@@ -2,13 +2,17 @@
 
 -module(db_migration).
 
--export([start_mnesia/0, transform/2, get_base_revision/0,
-	 create_migration_file/1, init_migrations/0,
-	 get_next_revision/1, get_current_head/1, get_current_head/0,
-	 read_config/0, create_migration_file/0,
-	 find_pending_migrations/0, apply_upgrades/0,
-	 get_revision_tree/0, append_revision_tree/2,
-	 get_applied_head/0, update_head/1
+-export([start_mnesia/0,
+	 get_base_revision/0,
+	 create_migration_file/1,
+	 create_migration_file/0,
+	 init_migrations/0,
+	 get_current_head/0,
+	 read_config/0,
+	 find_pending_migrations/0,
+	 apply_upgrades/0,
+	 get_revision_tree/0,
+	 get_applied_head/0
 	]).
 
 -define(TABLE, schema_migrations).
@@ -39,8 +43,6 @@ init_migrations() ->
             end
     end.
 
-transform(_Old_struct, _New_struct) ->
-	ok.
 
 %fetch_all_changed_tables() ->
     %set_path("/home/gaurav/project/butler_server/src"),
@@ -65,12 +67,16 @@ get_revision_tree() ->
     RevList.
 
 find_pending_migrations() ->
-   AppliedHead = case get_applied_head() of
-                     none -> get_base_revision() ;
-                     Id -> Id
+   RevList = case get_applied_head() of
+                     none -> case get_base_revision() of
+			         none -> [] ;
+				 BaseRevId -> append_revision_tree([], BaseRevId)
+			     end;
+                     Id -> case get_next_revision(Id) of
+			       [] -> [] ;
+			       NextId -> append_revision_tree([], NextId)
+			   end
                  end,
-   List1 = [],
-   RevList = append_revision_tree(List1, AppliedHead),
    io:format("Revisions needing migration : ~p~n", [RevList]),
    RevList.
 
