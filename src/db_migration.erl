@@ -96,7 +96,7 @@ create_migration_file(CommitMessage) ->
     io:format("New file created ~p~n", [Filename ++ ".erl"]).
 
 create_migration_file() ->
-    erlydtl:compile('schema.template', migration_template),
+    erlydtl:compile(code:lib_dir(mnesia_migrate) ++ 'schema.template', migration_template),
     NewRevisionId = "a" ++ string:substr(uuid:to_string(uuid:uuid4()),1,8),
     OldRevisionId = get_current_head(),
     Filename = NewRevisionId ++ "_migration" ,
