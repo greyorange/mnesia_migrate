@@ -15,6 +15,12 @@
 	 get_applied_head/0
 	]).
 
+-ifdef(TEST).
+-export([get_migration_source_filepath/0,
+	 get_migration_beam_filepath/0
+	]).
+-endif.
+
 -define(TABLE, schema_migrations).
 
 -record(schema_migrations, {curr_head=null, extra_info=null}).
