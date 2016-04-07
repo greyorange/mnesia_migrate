@@ -99,7 +99,8 @@ create_migration_file(CommitMessage) ->
 					  {modulename, Filename}, {tabtomig, []},
 					  {commitmessage, CommitMessage}]),
     file:write_file(get_migration_source_filepath() ++ Filename ++ ".erl", Data),
-    io:format("New file created ~p~n", [Filename ++ ".erl"]).
+    io:format("New file created ~p~n", [Filename ++ ".erl"]),
+    get_migration_source_filepath() ++ Filename ++ ".erl".
 
 create_migration_file() ->
     erlydtl:compile(code:lib_dir(mnesia_migrate) ++ "/schema.template", migration_template),
@@ -110,7 +111,8 @@ create_migration_file() ->
 					  {modulename, Filename}, {tabtomig, []},
 					  {commitmessage, "migration"}]),
     file:write_file(get_migration_source_filepath() ++ Filename ++ ".erl", Data),
-    io:format("New file created ~p~n", [Filename ++ ".erl"]).
+    io:format("New file created ~p~n", [Filename ++ ".erl"]),
+    get_migration_source_filepath() ++ Filename ++ ".erl".
 
 
 %%
