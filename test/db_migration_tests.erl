@@ -22,16 +22,36 @@ check_function_output_format_test_() ->
 	  ?_assertEqual(true, is_list(db_migration:get_revision_tree()))}
 	].
 
-%%check_migration_file_creation_test_() ->
-%%	[%{require, rm, unix},
-%%	 {"check revision file creation",
-%%	  %fun() -> code:add_path(?cmd(pwd)) end,
-%%	  % ?_assertEqual(true, filelib:is_file(db_migration:create_migration_file())),
-%%	  %?cmd(db_migration:create_migration_file())
-%%	  fun () ->
-%%	      Filename = db_migration:create_migration_file(),
-%%	      ?_assertEqual(true, filelib:is_file(Filename)),
-%%	      ?cmd("rm " ++ Filename)
-%%	  end
-%%	 }
-%%	].
+check_migration_file_creation_test_() ->
+	[%{require, rm, unix},
+	 {"check revision file creation",
+	  fun () ->
+	      {ok, Dir} = file:get_cwd(),
+	      code:add_path(Dir),
+	      %io:format("path: ~p~n", [Dir]),
+	      Filename = db_migration:create_migration_file(),
+	      ?_assertEqual(true, filelib:is_file(Filename))
+	      %io:format("file: ~p~n", [Filename])
+	  end
+	 },
+	 {"check revision file creation and deletion",
+	  fun () ->
+	      {ok, Dir} = file:get_cwd(),
+	      code:add_path(Dir),
+	      Filename = db_migration:create_migration_file(),
+	      ?_assertCmd("rm " ++ Filename)
+	  end
+	 }
+	].
+
+check_database_related_function_test_() ->
+	[
+	 {"check_applied_head",
+	  fun() -> db_migration:start_mnesia(),
+	  ?_assertEqual(true, is_atom(db_migration:get_applied_head()))
+	  end
+	 }
+	].
+
+check_db_related_test_() ->
+	?_assertEqual(false, is_list(db_migration:get_applied_head())).
