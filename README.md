@@ -3,11 +3,12 @@ A tool to upgrade/downgrade schema and migrate data between different versions o
 
 # Installation
 
-TODO: Add sample code for rebar and erlang.mk style projects
+* run `make deps` if you are using erlang.mk
 
 # Usage
 
-TODO
+* Add contents ofpriv/sys.config to your application's sys.config or use this config in your release.
+* Create a necessary directory based on priv/sys.config
 
 #License
 

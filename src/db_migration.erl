@@ -119,10 +119,15 @@ create_migration_file() ->
 
 apply_upgrades() ->
     RevList = find_pending_migrations(),
-    lists:foreach(fun(RevId) -> ModuleName = list_to_atom(atom_to_list(RevId) ++ "_migration") , ModuleName:up() end, RevList),
-    io:format("all upgrades successfully applied.~n"),
-    %% update head in database
-    update_head(lists:last(RevList)).
+    case RevList of
+        [] -> io:format("No pending revision found ~n");
+        _ ->
+            lists:foreach(fun(RevId) -> ModuleName = list_to_atom(atom_to_list(RevId) ++ "_migration") , ModuleName:up() end, RevList),
+            io:format("all upgrades successfully applied.~n"),
+            %% update head in database
+            update_head(lists:last(RevList))
+    end.
+
 
 
 append_revision_tree(List1, RevId) ->
@@ -191,7 +196,6 @@ get_next_revision(RevId) ->
 	end
     end,
     Modulelist),
-    %io:fwrite("Base Rev: ~p Next Rev ~p~n", [RevId,Res]),
     case Res of
     [] -> [];
     _ -> ModuleName = list_to_atom(filename:basename(Res, ".beam")), ModuleName:get_current_rev()
