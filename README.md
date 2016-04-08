@@ -7,9 +7,9 @@ A tool to upgrade/downgrade schema and migrate data between different versions o
 
 # Usage
 
-* Add contents ofpriv/sys.config to your application's sys.config or use this config in your release.
+* Add contents of priv/sys.config to your application's sys.config or use this config in your release.
 * Create a necessary directory based on priv/sys.config
 
 #License
 
-GNU LGPL v3
+MIT License
