@@ -30,7 +30,8 @@ check_migration_file_creation_test_() ->
 	      code:add_path(Dir),
 	      %io:format("path: ~p~n", [Dir]),
 	      Filename = db_migration:create_migration_file(),
-	      ?_assertEqual(true, filelib:is_file(Filename))
+	      ?assertEqual(true, filelib:is_file(Filename)),
+	      ?assertCmd("rm " ++ Filename)
 	      %io:format("file: ~p~n", [Filename])
 	  end
 	 },
@@ -39,19 +40,44 @@ check_migration_file_creation_test_() ->
 	      {ok, Dir} = file:get_cwd(),
 	      code:add_path(Dir),
 	      Filename = db_migration:create_migration_file(),
-	      ?_assertCmd("rm " ++ Filename)
+	      ?assertCmd("rm " ++ Filename)
 	  end
 	 }
 	].
 
 check_database_related_function_test_() ->
 	[
-	 {"check_applied_head",
-	  fun() -> db_migration:start_mnesia(),
-	  ?_assertEqual(true, is_atom(db_migration:get_applied_head()))
+	 {"check_applied_head_test_1",
+	  fun() ->
+	      db_migration:start_mnesia(),
+	      mnesia:wait_for_tables([schema_migrations], 1000),
+	      ?assertEqual(true, is_atom(db_migration:get_applied_head()))
 	  end
 	 }
 	].
 
 check_db_related_test_() ->
-	?_assertEqual(false, is_list(db_migration:get_applied_head())).
+	[
+	 {"check_applied_head_test_2",
+	  fun() ->
+	      db_migration:start_mnesia(),
+	      mnesia:wait_for_tables([schema_migrations], 1000),
+	      ?assertEqual(false, is_list(db_migration:get_applied_head()))
+	  end
+	 }
+	].
+
+check_single_upgrade_function_test_() ->
+	[
+	 {
+	 "check basic upgrade",
+	  fun () ->
+	      db_migration:start_mnesia(),
+	      {ok, Mod} = compile:file('test/test_migration_1'),
+	      Mod:down(),
+	      Resp = Mod:up(),
+	      Mod:down(),
+	      ?assertEqual(test_val, Resp)
+	  end
+	 }
+	].
