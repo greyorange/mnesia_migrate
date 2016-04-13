@@ -81,3 +81,26 @@ check_single_upgrade_function_test_() ->
 	  end
 	 }
 	].
+
+check_consecutive_upgrade_function_test_() ->
+	[
+	 {
+	 "check consecutive upgrade",
+	  fun () ->
+	      db_migration:start_mnesia(),
+	      {ok, Mod} = compile:file('test/test_migration_1'),
+	      Mod:up(),
+	      {ok, Mod1} = compile:file('test/test_migration_2'),
+	      UpResp = Mod1:up(),
+	      ?assertEqual({test_table,test_val,null,whoa}, UpResp),
+	      os:cmd("sed -i -e 's/upgrade/downgrade/g' test/test_migration_2.erl"),
+	      os:cmd("rm test/test_migration_2.beam"),
+	      {ok, Mod2} = compile:file('test/test_migration_2.erl'),
+	      code:load_file(Mod2),
+	      os:cmd("sed -i -e 's/downgrade/upgrade/g' test/test_migration_2.erl"),
+	      DownResp = Mod2:down(),
+	      ?assertEqual({test_table,test_val,null}, DownResp),
+	      Mod:down()
+	  end
+	 }
+	].

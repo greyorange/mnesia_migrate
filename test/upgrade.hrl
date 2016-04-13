@@ -1,0 +1,1 @@
+-record(test_table, {sample_column_1, extra_info}).
