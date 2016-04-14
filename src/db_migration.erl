@@ -23,7 +23,7 @@
 
 -define(TABLE, schema_migrations).
 
--record(schema_migrations, {curr_head=null, extra_info=null}).
+-record(schema_migrations, {prime_key = null, curr_head=null, extra_info=null}).
 
 read_config() ->
     Val = case application:get_env(mnesia_migrate, migration_dir, "~/project/mnesia_migrate/src/migrations/") of
@@ -82,7 +82,7 @@ find_pending_migrations() ->
 			       [] -> [] ;
 			       NextId -> append_revision_tree([], NextId)
 			   end
-                 end,
+             end,
    io:format("Revisions needing migration : ~p~n", [RevList]),
    RevList.
 
@@ -141,16 +141,25 @@ append_revision_tree(List1, RevId) ->
     end.
 
 get_applied_head() ->
-	{atomic, KeyList} = mnesia:transaction(fun() -> mnesia:all_keys(schema_migrations) end),
-	Head = case length(KeyList) of
-	           0 -> none;
-	           _ -> hd(KeyList)
-               end,
-	io:format("current applied head is : ~p~n", [Head]),
-	Head.
+    {atomic, KeyList} = mnesia:transaction(fun() -> mnesia:read(schema_migrations, head) end),
+    Head = case length(KeyList) of
+               0 -> none;
+               _ ->
+               Rec = hd(KeyList),
+               Rec#schema_migrations.curr_head
+           end,
+    io:format("current applied head is : ~p~n", [Head]),
+    Head.
 
 update_head(Head) ->
-	mnesia:transaction(fun() -> mnesia:write(schema_migrations, #schema_migrations{curr_head = Head}, write) end).
+    mnesia:transaction(fun() ->
+        case mnesia:wread({schema_migrations, head}) of
+            [] ->
+                 mnesia:write(schema_migrations, #schema_migrations{prime_key = head, curr_head = Head}, write);
+            [CurrRec] ->
+                mnesia:write(CurrRec#schema_migrations{curr_head = Head})
+        end
+    end).
 
 %%
 %% helper functions
@@ -199,8 +208,8 @@ get_next_revision(RevId) ->
     end,
     Modulelist),
     case Res of
-    [] -> [];
-    _ -> ModuleName = list_to_atom(filename:basename(Res, ".beam")), ModuleName:get_current_rev()
+        [] -> [];
+        _ -> ModuleName = list_to_atom(filename:basename(Res, ".beam")), ModuleName:get_current_rev()
     end.
 
 get_current_head(RevId) ->
