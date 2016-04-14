@@ -12,7 +12,8 @@
 	 find_pending_migrations/0,
 	 apply_upgrades/0,
 	 get_revision_tree/0,
-	 get_applied_head/0
+	 get_applied_head/0,
+	 detect_conflicts_post_migration/1
 	]).
 
 -ifdef(TEST).
@@ -49,13 +50,6 @@ init_migrations() ->
             end
     end.
 
-
-%fetch_all_changed_tables() ->
-    %set_path("/home/gaurav/project/butler_server/src"),
-%    Models = models:all(),
-%    Tabletomigrate = [TableName || {TableName, Options} <- Models , proplists:get_value(attributes, Options) /= mnesia:table_info(TableName, attributes)],
-%    io:fwrite("Tables needing migration : ~p~n", [Tabletomigrate]),
-%    Tabletomigrate.
 
 %%
 %%Functions related to migration info
@@ -160,6 +154,17 @@ update_head(Head) ->
                 mnesia:write(CurrRec#schema_migrations{curr_head = Head})
         end
     end).
+
+%%
+%% Post migration validations
+%%
+
+-spec detect_conflicts_post_migration([{tuple(), list()}]) -> list().
+detect_conflicts_post_migration(Models) ->
+    ConflictingTables = [TableName || {TableName, Options} <- Models , proplists:get_value(attributes, Options) /= mnesia:table_info(TableName, attributes)],
+    io:fwrite("Tables having conflicts in structure after applying migrations: ~p~n", [ConflictingTables]),
+    ConflictingTables.
+
 
 %%
 %% helper functions
