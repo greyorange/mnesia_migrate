@@ -48,7 +48,8 @@ init_migrations() ->
                 {aborted, Reason} -> io:format("mnesia create table error: ~p~n", [Reason]),
 				     throw({error, Reason})
             end
-    end.
+    end,
+    ok = mnesia:wait_for_tables([?TABLE], 10000).
 
 
 %%
