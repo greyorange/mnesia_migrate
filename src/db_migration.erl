@@ -24,7 +24,7 @@
 
 -define(TABLE, schema_migrations).
 
--record(schema_migrations, {prime_key = null, curr_head=null, extra_info=null}).
+-record(schema_migrations, {prime_key = null, curr_head=null}).
 
 read_config() ->
     Val = case application:get_env(mnesia_migrate, migration_dir, "~/project/mnesia_migrate/src/migrations/") of
