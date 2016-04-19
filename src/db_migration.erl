@@ -225,13 +225,17 @@ get_current_head(RevId) ->
     end.
 
 get_migration_source_filepath() ->
-    case application:get_env(mnesia_migrate, migration_source_dir, "/home/gaurav/project/mnesia_migrate/src/migrations/") of
-        {ok, Value} -> Value;
-        Def -> Def
+    case application:get_env(mnesia_migrate, migration_source_dir, "src/migrations/") of
+        {ok, Value} -> ok = filelib:ensure_dir(Value),
+		       Value;
+        Def -> ok = filelib:ensure_dir(Def),
+	       Def
     end.
 
 get_migration_beam_filepath() ->
-    case application:get_env(mnesia_migrate, migration_beam_dir, "/home/gaurav/project/mnesia_migrate/ebin/") of
-        {ok, Value} -> Value;
-        Def -> Def
+    case application:get_env(mnesia_migrate, migration_beam_dir, "ebin/") of
+        {ok, Value} -> ok = filelib:ensure_dir(Value),
+		       Value;
+        Def -> ok = filelib:ensure_dir(Def),
+	       Def
     end.
