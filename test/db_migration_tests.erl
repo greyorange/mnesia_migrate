@@ -50,7 +50,8 @@ check_database_related_function_test_() ->
 	 {"check_applied_head_test_1",
 	  fun() ->
 	      db_migration:start_mnesia(),
-	      mnesia:wait_for_tables([schema_migrations], 1000),
+	      db_migration:init_migrations(),
+	      mnesia:wait_for_tables([schema_migrations], 10000),
 	      ?assertEqual(true, is_atom(db_migration:get_applied_head()))
 	  end
 	 }
@@ -61,7 +62,8 @@ check_db_related_test_() ->
 	 {"check_applied_head_test_2",
 	  fun() ->
 	      db_migration:start_mnesia(),
-	      mnesia:wait_for_tables([schema_migrations], 1000),
+	      db_migration:init_migrations(),
+	      mnesia:wait_for_tables([schema_migrations], 10000),
 	      ?assertEqual(false, is_list(db_migration:get_applied_head()))
 	  end
 	 }
