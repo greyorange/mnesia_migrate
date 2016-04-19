@@ -1,0 +1,6 @@
+language: erlang
+otp_release:
+   - 18.3
+before_script:
+  - "make deps"
+script: "make eunit"
