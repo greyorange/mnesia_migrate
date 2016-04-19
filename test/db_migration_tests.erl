@@ -49,6 +49,7 @@ check_database_related_function_test_() ->
 	[
 	 {"check_applied_head_test_1",
 	  fun() ->
+	      mnesia:create_schema([node()]),
 	      db_migration:start_mnesia(),
 	      db_migration:init_migrations(),
 	      ?assertEqual(true, is_atom(db_migration:get_applied_head()))
@@ -60,6 +61,7 @@ check_db_related_test_() ->
 	[
 	 {"check_applied_head_test_2",
 	  fun() ->
+	      mnesia:create_schema([node()]),
 	      db_migration:start_mnesia(),
 	      db_migration:init_migrations(),
 	      ?assertEqual(false, is_list(db_migration:get_applied_head()))
