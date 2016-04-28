@@ -116,7 +116,7 @@ apply_upgrades() ->
     case RevList of
         [] -> io:format("No pending revision found ~n");
         _ ->
-            lists:foreach(fun(RevId) -> ModuleName = list_to_atom(atom_to_list(RevId) ++ "_migration") , ModuleName:up() end, RevList),
+            lists:foreach(fun(RevId) -> ModuleName = list_to_atom(atom_to_list(RevId) ++ "_migration") , io:format("Running upgrade ~p -> ~p ~n",[ModuleName:get_prev_rev(), ModuleName:get_current_rev()]),ModuleName:up() end, RevList),
             io:format("all upgrades successfully applied.~n"),
             %% update head in database
             update_head(lists:last(RevList))
