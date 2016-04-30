@@ -13,7 +13,8 @@
 	 apply_upgrades/0,
 	 get_revision_tree/0,
 	 get_applied_head/0,
-	 detect_conflicts_post_migration/1
+	 detect_conflicts_post_migration/1,
+	 apply_downgrades/1
 	]).
 
 -ifdef(TEST).
@@ -61,6 +62,13 @@ get_revision_tree() ->
     BaseRev = get_base_revision(),
     List1 = [],
     RevList = append_revision_tree(List1, BaseRev),
+    io:format("RevList ~p~n", [RevList]),
+    RevList.
+
+get_down_revision_tree() ->
+    BaseRev = get_applied_head(),
+    List1 = [],
+    RevList = append_down_revision_tree(List1, BaseRev),
     io:format("RevList ~p~n", [RevList]),
     RevList.
 
@@ -123,9 +131,29 @@ apply_upgrades() ->
 			  end,
 			  RevList),
                         io:format("all upgrades successfully applied.~n")
+    end,
+    {ok, applied}.
+
+apply_downgrades(DownNum) ->
+    CurrHead = get_applied_head(),
+    Count = get_count_between_2_revisions(get_base_revision(), CurrHead),
+    case Count > DownNum of
+        false -> io:format("Wrong number for downgrade ~n"),
+		 {error, wrong_number};
+	true -> RevList = get_down_revision_tree(),
+		SubList = lists:sublist(RevList, 1, DownNum),
+                case SubList of
+                    [] -> io:format("No down revision found ~n");
+                    _ ->
+                        lists:foreach(fun(RevId) -> ModuleName = list_to_atom(atom_to_list(RevId) ++ "_migration") ,
+                                                    io:format("Running downgrade ~p -> ~p ~n",[ModuleName:get_current_rev(), ModuleName:get_prev_rev()]),
+                                                    ModuleName:down(),
+                                                    update_head(ModuleName:get_prev_rev())
+                                      end,
+                                      SubList),
+                        io:format("all downgrades successfully applied.~n")
+                end
     end.
-
-
 
 append_revision_tree(List1, RevId) ->
     case get_next_revision(RevId) of
@@ -133,6 +161,14 @@ append_revision_tree(List1, RevId) ->
 	NewRevId ->
 		   List2 = List1 ++ [RevId],
 	           append_revision_tree(List2, NewRevId)
+    end.
+
+append_down_revision_tree(List1, RevId) ->
+    case get_prev_revision(RevId) of
+        [] -> List1 ++ [RevId];
+	NewRevId ->
+		   List2 = List1 ++ [RevId],
+	           append_down_revision_tree(List2, NewRevId)
     end.
 
 get_applied_head() ->
@@ -202,6 +238,21 @@ get_base_revision() ->
 	_ -> BaseModuleName:get_current_rev()
     end.
 
+get_prev_revision(RevId) ->
+    CurrModuleName = list_to_atom(atom_to_list(RevId) ++ "_migration"),
+    Modulelist = filelib:wildcard(get_migration_beam_filepath() ++ "*_migration.beam"),
+    Res = lists:filter(fun(Filename) ->
+        Modulename = list_to_atom(filename:basename(Filename, ".beam")),
+        case has_migration_behaviour(Modulename) of
+	    true -> string:equal(Modulename:get_current_rev(), CurrModuleName:get_prev_rev());
+	    false -> false
+	end
+    end,
+    Modulelist),
+    case Res of
+        [] -> [];
+        _ -> ModuleName = list_to_atom(filename:basename(Res, ".beam")), ModuleName:get_current_rev()
+    end.
 
 get_next_revision(RevId) ->
     Modulelist = filelib:wildcard(get_migration_beam_filepath() ++ "*_migration.beam"),
@@ -233,3 +284,8 @@ get_migration_beam_filepath() ->
     Val = application:get_env(mnesia_migrate, migration_beam_dir, "ebin/"),
     ok = filelib:ensure_dir(Val),
     Val.
+
+get_count_between_2_revisions(RevStart, RevEnd) ->
+    RevList = get_revision_tree(),
+    Count = string:str(RevList, [RevEnd])  - string:str(RevList, [RevStart]),
+    Count.
