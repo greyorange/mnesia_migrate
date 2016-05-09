@@ -24,12 +24,13 @@
 -endif.
 
 -define(TABLE, schema_migrations).
+-define(DEBUG, application:get_env(mnesia_migrate, debug, false)).
 
 -record(schema_migrations, {prime_key = null, curr_head=null}).
 
 read_config() ->
     Val  = application:get_env(mnesia_migrate, migration_dir, "~/project/mnesia_migrate/src/migrations/"),
-    io:format("migration_dir: ~p~n", [Val]).
+    print("migration_dir: ~p~n", [Val]).
 
 start_mnesia() ->
 	mnesia:start().
@@ -39,11 +40,11 @@ init_migrations() ->
         true ->
             ok;
         false ->
-            io:format("Table schema_migration not found, creating...~n", []),
+            print("Table schema_migration not found, creating...~n", []),
             Attr = [{disc_copies, [node()]}, {attributes, record_info(fields, schema_migrations)}],
             case mnesia:create_table(?TABLE, Attr) of
-                {atomic, ok}      -> io:format(" => created~n", []);
-                {aborted, Reason} -> io:format("mnesia create table error: ~p~n", [Reason]),
+                {atomic, ok}      -> print(" => created~n", []);
+                {aborted, Reason} -> print("mnesia create table error: ~p~n", [Reason]),
 				     throw({error, Reason})
             end
     end,
@@ -62,14 +63,14 @@ get_revision_tree() ->
     BaseRev = get_base_revision(),
     List1 = [],
     RevList = append_revision_tree(List1, BaseRev),
-    io:format("RevList ~p~n", [RevList]),
+    print("RevList ~p~n", [RevList]),
     RevList.
 
 get_down_revision_tree() ->
     BaseRev = get_applied_head(),
     List1 = [],
     RevList = append_down_revision_tree(List1, BaseRev),
-    io:format("RevList ~p~n", [RevList]),
+    print("RevList ~p~n", [RevList]),
     RevList.
 
 find_pending_migrations() ->
@@ -83,7 +84,7 @@ find_pending_migrations() ->
 			       NextId -> append_revision_tree([], NextId)
 			   end
              end,
-   io:format("Revisions needing migration : ~p~n", [RevList]),
+   print("Revisions needing migration : ~p~n", [RevList]),
    RevList.
 
 %%
@@ -99,7 +100,7 @@ create_migration_file(CommitMessage) ->
 					  {modulename, Filename}, {tabtomig, []},
 					  {commitmessage, CommitMessage}]),
     file:write_file(get_migration_source_filepath() ++ Filename ++ ".erl", Data),
-    io:format("New file created ~p~n", [Filename ++ ".erl"]),
+    print("New file created ~p~n", [Filename ++ ".erl"]),
     get_migration_source_filepath() ++ Filename ++ ".erl".
 
 create_migration_file() ->
@@ -111,7 +112,7 @@ create_migration_file() ->
 					  {modulename, Filename}, {tabtomig, []},
 					  {commitmessage, "migration"}]),
     file:write_file(get_migration_source_filepath() ++ Filename ++ ".erl", Data),
-    io:format("New file created ~p~n", [Filename ++ ".erl"]),
+    print("New file created ~p~n", [Filename ++ ".erl"]),
     get_migration_source_filepath() ++ Filename ++ ".erl".
 
 
@@ -122,15 +123,15 @@ create_migration_file() ->
 apply_upgrades() ->
     RevList = find_pending_migrations(),
     case RevList of
-        [] -> io:format("No pending revision found ~n");
+        [] -> print("No pending revision found ~n", []);
         _ ->
             lists:foreach(fun(RevId) -> ModuleName = list_to_atom(atom_to_list(RevId) ++ "_migration") ,
-					io:format("Running upgrade ~p -> ~p ~n",[ModuleName:get_prev_rev(), ModuleName:get_current_rev()]),
+					print("Running upgrade ~p -> ~p ~n",[ModuleName:get_prev_rev(), ModuleName:get_current_rev()]),
 					ModuleName:up(),
 					update_head(RevId)
 			  end,
 			  RevList),
-                        io:format("all upgrades successfully applied.~n")
+                        print("all upgrades successfully applied.~n", [])
     end,
     {ok, applied}.
 
@@ -138,20 +139,20 @@ apply_downgrades(DownNum) ->
     CurrHead = get_applied_head(),
     Count = get_count_between_2_revisions(get_base_revision(), CurrHead),
     case Count > DownNum of
-        false -> io:format("Wrong number for downgrade ~n"),
+        false -> print("Wrong number for downgrade ~n", []),
 		 {error, wrong_number};
 	true -> RevList = get_down_revision_tree(),
 		SubList = lists:sublist(RevList, 1, DownNum),
                 case SubList of
-                    [] -> io:format("No down revision found ~n");
+                    [] -> print("No down revision found ~n", []);
                     _ ->
                         lists:foreach(fun(RevId) -> ModuleName = list_to_atom(atom_to_list(RevId) ++ "_migration") ,
-                                                    io:format("Running downgrade ~p -> ~p ~n",[ModuleName:get_current_rev(), ModuleName:get_prev_rev()]),
+                                                    print("Running downgrade ~p -> ~p ~n",[ModuleName:get_current_rev(), ModuleName:get_prev_rev()]),
                                                     ModuleName:down(),
                                                     update_head(ModuleName:get_prev_rev())
                                       end,
                                       SubList),
-                        io:format("all downgrades successfully applied.~n")
+                        print("all downgrades successfully applied.~n", [])
                 end
     end.
 
@@ -179,7 +180,7 @@ get_applied_head() ->
                Rec = hd(KeyList),
                Rec#schema_migrations.curr_head
            end,
-    io:format("current applied head is : ~p~n", [Head]),
+    print("current applied head is : ~p~n", [Head]),
     Head.
 
 update_head(Head) ->
@@ -199,7 +200,7 @@ update_head(Head) ->
 -spec detect_conflicts_post_migration([{tuple(), list()}]) -> list().
 detect_conflicts_post_migration(Models) ->
     ConflictingTables = [TableName || {TableName, Options} <- Models , proplists:get_value(attributes, Options) /= mnesia:table_info(TableName, attributes)],
-    io:fwrite("Tables having conflicts in structure after applying migrations: ~p~n", [ConflictingTables]),
+    print("Tables having conflicts in structure after applying migrations: ~p~n", [ConflictingTables]),
     ConflictingTables.
 
 
@@ -232,7 +233,7 @@ get_base_revision() ->
     end,
     Modulelist),
     BaseModuleName = list_to_atom(filename:basename(Res, ".beam")),
-    io:fwrite("Base Rev module is ~p~n", [BaseModuleName]),
+    print("Base Rev module is ~p~n", [BaseModuleName]),
     case Res of
         [] -> none;
 	_ -> BaseModuleName:get_current_rev()
@@ -289,3 +290,9 @@ get_count_between_2_revisions(RevStart, RevEnd) ->
     RevList = get_revision_tree(),
     Count = string:str(RevList, [RevEnd])  - string:str(RevList, [RevStart]),
     Count.
+
+print(Statement, Arg) ->
+    case ?DEBUG of
+        true -> io:format(Statement, Arg);
+        false -> ok
+    end.

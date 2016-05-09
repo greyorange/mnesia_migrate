@@ -12,6 +12,7 @@ A tool to upgrade/downgrade schema and migrate data between different versions o
 * Add contents of priv/sys.config to your application's sys.config or use this config in your release.
 * Use forward slash in defining directory names in sys.config
 * To use apply_downgrades/1, use a number in the argument which will downgrade that many revisions from currently applied head.
+* To enable print statements of library, add {debug, true} in sys.config
 
 #License
 
