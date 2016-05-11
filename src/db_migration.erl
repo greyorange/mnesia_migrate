@@ -24,7 +24,6 @@
 -endif.
 
 -define(TABLE, schema_migrations).
--define(DEBUG, application:get_env(mnesia_migrate, debug, false)).
 
 -record(schema_migrations, {prime_key = null, curr_head=null}).
 
@@ -292,7 +291,7 @@ get_count_between_2_revisions(RevStart, RevEnd) ->
     Count.
 
 print(Statement, Arg) ->
-    case ?DEBUG of
+    case application:get_env(mnesia_migrate, debug, false) of
         true -> io:format(Statement, Arg);
         false -> ok
     end.
