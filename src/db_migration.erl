@@ -292,7 +292,7 @@ get_count_between_2_revisions(RevStart, RevEnd) ->
     Count.
 
 print(Statement, Arg) ->
-    case application:get_env(mnesia_migrate, verbose, true) of
+    case application:get_env(mnesia_migrate, verbose, false) of
         true -> io:format(Statement, Arg);
         false -> ok
     end.
