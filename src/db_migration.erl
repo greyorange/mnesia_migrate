@@ -48,7 +48,7 @@ init_migrations() ->
 				     throw({error, Reason})
             end
     end,
-    ok = mnesia:wait_for_tables([?TABLE], 10000).
+    ok = mnesia:wait_for_tables([?TABLE], 1000000).
 
 
 %%
