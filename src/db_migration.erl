@@ -20,7 +20,10 @@
 
 -ifdef(TEST).
 -export([get_migration_source_filepath/0,
-	 get_migration_beam_filepath/0
+	 get_migration_beam_filepath/0,
+   get_next_revision/1,
+   get_prev_revision/1,
+   get_count_between_2_revisions/2
 	]).
 -endif.
 
@@ -139,11 +142,11 @@ apply_upgrades() ->
 apply_downgrades(DownNum) ->
     CurrHead = get_applied_head(),
     Count = get_count_between_2_revisions(get_base_revision(), CurrHead),
-    case Count > DownNum of
+    case DownNum =< Count of
         false -> print("Wrong number for downgrade ~n", []),
-		 {error, wrong_number};
-	true -> RevList = get_down_revision_tree(),
-		SubList = lists:sublist(RevList, 1, DownNum),
+                 {error, wrong_number};
+        true -> RevList = get_down_revision_tree(),
+                SubList = lists:sublist(RevList, 1, DownNum),
                 case SubList of
                     [] -> print("No down revision found ~n", []);
                     _ ->
