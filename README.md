@@ -15,6 +15,6 @@ A tool to upgrade/downgrade schema and migrate data between different versions o
 * To enable print statements of library, add {debug, true} in sys.config
 * Run `detect_revision_sequence_conflicts()` to get a list of revision id where there is a fork in the revision tree.
 
-#License
+# License
 
 MIT License
