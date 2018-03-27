@@ -231,7 +231,7 @@ get_base_revision() ->
     Res = lists:filter(fun(Filename) ->
         Modulename = list_to_atom(filename:basename(Filename, ".beam")),
         case has_migration_behaviour(Modulename) of
-	    true -> string:equal(Modulename:get_prev_rev(),none);
+	    true -> Modulename:get_prev_rev() =:= none;
 	    false -> false
 	end
     end,
@@ -249,7 +249,7 @@ get_prev_revision(RevId) ->
     Res = lists:filter(fun(Filename) ->
         Modulename = list_to_atom(filename:basename(Filename, ".beam")),
         case has_migration_behaviour(Modulename) of
-	    true -> string:equal(Modulename:get_current_rev(), CurrModuleName:get_prev_rev());
+	    true -> Modulename:get_current_rev() =:= CurrModuleName:get_prev_rev();
 	    false -> false
 	end
     end,
@@ -264,7 +264,7 @@ get_next_revision(RevId) ->
     Res = lists:filter(fun(Filename) ->
         Modulename = list_to_atom(filename:basename(Filename, ".beam")),
         case has_migration_behaviour(Modulename) of
-	    true -> string:equal(Modulename:get_prev_rev(), RevId);
+	    true -> Modulename:get_prev_rev() =:= RevId;
 	    false -> false
 	end
     end,
@@ -309,7 +309,7 @@ detect_revision_sequence_conflicts() ->
             Res = lists:filter(fun(Filename) ->
                 Modulename = list_to_atom(filename:basename(Filename, ".beam")),
                 case has_migration_behaviour(Modulename) of
-                    true -> string:equal(Modulename:get_prev_rev(), RevId);
+                    true -> Modulename:get_prev_rev() =:= RevId;
                     false -> false
                 end
             end,
