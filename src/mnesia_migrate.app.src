@@ -1,0 +1,15 @@
+{application, mnesia_migrate,
+ [{description, "An application to upgrade or downgrade mnesia database"},
+  {vsn, "git"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {maintainers, ["Gaurav Kumar", "Srijan Choudhary"]},
+  {licenses, ["MIT"]},
+  {links, [{"Github", "https://github.com/greyorange/mnesia_migrate"}]}
+ ]}.
