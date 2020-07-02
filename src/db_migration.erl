@@ -8,10 +8,12 @@
 	 create_migration_file/0,
 	 init_migrations/0,
 	 get_current_head/0,
+	 update_head/1,
 	 read_config/0,
 	 find_pending_migrations/0,
 	 apply_upgrades/0,
 	 get_revision_tree/0,
+	 get_revision_tree_raw/0,
 	 get_applied_head/0,
 	 detect_conflicts_post_migration/1,
 	 apply_downgrades/1,
@@ -69,6 +71,11 @@ get_revision_tree() ->
     RevList = append_revision_tree(List1, BaseRev),
     print("RevList ~p~n", [RevList]),
     RevList.
+
+get_revision_tree_raw() ->
+    BaseRev = get_base_revision(),
+    List1 = [],
+    append_revision_tree(List1, BaseRev).
 
 get_down_revision_tree() ->
     BaseRev = get_applied_head(),
