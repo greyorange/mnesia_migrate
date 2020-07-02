@@ -8,6 +8,7 @@
 	 create_migration_file/0,
 	 init_migrations/0,
 	 get_current_head/0,
+	 update_head/1,
 	 read_config/0,
 	 find_pending_migrations/0,
 	 apply_upgrades/0,
