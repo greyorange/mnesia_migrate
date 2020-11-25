@@ -2,29 +2,32 @@
 
 -module(db_migration).
 
--export([start_mnesia/0,
-	 get_base_revision/0,
-	 create_migration_file/1,
-	 create_migration_file/0,
-	 init_migrations/0,
-	 get_current_head/0,
-	 read_config/0,
-	 find_pending_migrations/0,
-	 apply_upgrades/0,
-	 get_revision_tree/0,
-	 get_applied_head/0,
-	 detect_conflicts_post_migration/1,
-	 apply_downgrades/1,
-	 detect_revision_sequence_conflicts/0
-	]).
+-export([
+    start_mnesia/0,
+    get_base_revision/0,
+    create_migration_file/1,
+    create_migration_file/0,
+    init_migrations/0,
+    get_current_head/0,
+    read_config/0,
+    find_pending_migrations/0,
+    apply_upgrades/0,
+    get_revision_tree/0,
+    get_applied_head/0,
+    detect_conflicts_post_migration/1,
+    apply_downgrades/1,
+    detect_revision_sequence_conflicts/0,
+    get_dangling_migrations/0
+]).
 
 -ifdef(TEST).
--export([get_migration_source_filepath/0,
-	 get_migration_beam_filepath/0,
-   get_next_revision/1,
-   get_prev_revision/1,
-   get_count_between_2_revisions/2
-	]).
+-export([
+    get_migration_source_filepath/0,
+	get_migration_beam_filepath/0,
+    get_next_revision/1,
+    get_prev_revision/1,
+    get_count_between_2_revisions/2
+]).
 -endif.
 
 -define(TABLE, schema_migrations).
@@ -322,3 +325,10 @@ detect_revision_sequence_conflicts() ->
 	    end,
             Tree),
     ConflictId.
+
+-spec get_dangling_migrations() -> DanglingMigrationList :: list(atom()).
+get_dangling_migrations() ->
+    RevisionTreeMigrationList = db_migration:get_revision_tree(),
+    MigrationFiles = filelib:wildcard(application:get_env(mnesia_migrate, migration_beam_dir, "ebin/") ++ "*_migration.beam"),
+    MigrationList = [list_to_atom(filename:basename(MigrationFile, "_migration.beam")) || MigrationFile <- MigrationFiles],
+    MigrationList -- RevisionTreeMigrationList.
